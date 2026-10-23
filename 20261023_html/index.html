@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d18">
+  <title>考試大鐘</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: #080d18;
+      color: #f4f7ff;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% 20%, rgba(29, 56, 96, .42), transparent 55%),
+        #080d18;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: min(1180px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: clamp(20px, 4vw, 48px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 24px;
+      padding: 6px;
+      border: 1px solid #263249;
+      border-radius: 12px;
+      background: #111a2a;
+    }
+
+    .tab-button {
+      min-height: 48px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #aebbd1;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-button[aria-selected="true"] {
+      background: #3979e8;
+      color: #fff;
+    }
+
+    .tab-button:focus-visible,
+    .action-button:focus-visible,
+    .bell-button:focus-visible {
+      outline: 3px solid #b6d0ff;
+      outline-offset: 3px;
+    }
+
+    .tab-panel { width: 100%; }
+    .tab-panel[hidden] { display: none; }
+
+    .clock-panel {
+      width: 100%;
+      text-align: center;
+      padding: clamp(28px, 6vh, 68px) 12px 34px;
+    }
+
+    .date {
+      color: #aebbd1;
+      font-size: clamp(1.1rem, 2.5vw, 1.65rem);
+      letter-spacing: .12em;
+    }
+
+    .clock {
+      margin: 12px 0 10px;
+      color: #fff;
+      font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+      font-size: clamp(5rem, 19vw, 13.5rem);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: .025em;
+      line-height: 1.08;
+      text-shadow: 0 0 42px rgba(94, 157, 255, .2);
+    }
+
+    .countdown {
+      min-height: 2.2rem;
+      color: #70dfb2;
+      font-size: clamp(1.2rem, 3vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .countdown.warning { color: #ff5d67; }
+
+    .exam-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid #263249;
+      border-radius: 16px;
+      background: #263249;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .2);
+    }
+
+    .info-item {
+      min-width: 0;
+      padding: 20px clamp(14px, 2.5vw, 28px);
+      background: #111a2a;
+      text-align: center;
+    }
+
+    .info-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #8e9db5;
+      font-size: .9rem;
+      letter-spacing: .12em;
+    }
+
+    .info-value {
+      display: block;
+      overflow-wrap: anywhere;
+      color: #f4f7ff;
+      font-size: clamp(1.05rem, 2.3vw, 1.55rem);
+      font-weight: 700;
+    }
+
+    .controls {
+      width: 100%;
+      margin-top: 34px;
+      padding: clamp(20px, 3vw, 30px);
+      border: 1px solid #263249;
+      border-radius: 16px;
+      background: rgba(17, 26, 42, .88);
+    }
+
+    .controls h1 {
+      margin: 0 0 20px;
+      font-size: 1.2rem;
+      color: #cbd7ea;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: #aebbd1;
+      font-size: .95rem;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid #35435b;
+      border-radius: 8px;
+      outline: none;
+      background: #0a1120;
+      color: #f4f7ff;
+    }
+
+    .field input:focus {
+      border-color: #79aaff;
+      box-shadow: 0 0 0 3px rgba(121, 170, 255, .18);
+    }
+
+    input[type="time"], input[type="number"] { color-scheme: dark; }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 24px;
+    }
+
+    .fullscreen-button {
+      min-height: 48px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 9px;
+      background: #3979e8;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease, transform .15s ease;
+    }
+
+    .fullscreen-button:hover { background: #4c8aff; }
+    .fullscreen-button:active { transform: translateY(1px); }
+    .fullscreen-button:focus-visible { outline: 3px solid #b6d0ff; outline-offset: 3px; }
+
+    .storage-note {
+      margin: 16px 0 0;
+      color: #71809a;
+      font-size: .85rem;
+      text-align: center;
+    }
+
+    .app.is-fullscreen {
+      width: 100%;
+      justify-content: center;
+      padding: clamp(18px, 5vw, 72px);
+    }
+
+    .app.is-fullscreen .clock-panel { padding-top: 0; }
+    .app.is-fullscreen .controls { display: none; }
+    .app.is-fullscreen .tabs { display: none; }
+    .app.is-fullscreen #bells-view,
+    .app.is-fullscreen #pomodoro-view { display: none; }
+    .app.is-fullscreen #exam-view { display: block; }
+
+    .tool-heading {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+    }
+
+    .tool-description {
+      margin: 0 0 24px;
+      color: #8e9db5;
+    }
+
+    .bell-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin: 26px 0 34px;
+    }
+
+    .bell-button {
+      min-height: 150px;
+      border: 1px solid #426ca5;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #193d68, #10233d);
+      color: #fff;
+      font-size: clamp(1.7rem, 5vw, 2.8rem);
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, .2);
+    }
+
+    .bell-button:last-child {
+      border-color: #477c6c;
+      background: linear-gradient(145deg, #1d5748, #10362e);
+    }
+
+    .bell-button:hover { filter: brightness(1.16); }
+
+    .tool-card {
+      width: 100%;
+      margin-top: 22px;
+      padding: clamp(18px, 3vw, 28px);
+      border: 1px solid #263249;
+      border-radius: 16px;
+      background: rgba(17, 26, 42, .88);
+    }
+
+    .tool-card h2 {
+      margin: 0 0 18px;
+      color: #cbd7ea;
+      font-size: 1.2rem;
+    }
+
+    .schedule-head, .schedule-row {
+      display: grid;
+      grid-template-columns: minmax(100px, 1.2fr) minmax(125px, 1fr) minmax(125px, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .schedule-head {
+      padding: 0 10px 10px;
+      color: #8e9db5;
+      font-size: .9rem;
+    }
+
+    .schedule-row {
+      padding: 10px;
+      border-top: 1px solid #263249;
+    }
+
+    .schedule-row input, .duration-input {
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid #35435b;
+      border-radius: 8px;
+      background: #0a1120;
+      color: #f4f7ff;
+    }
+
+    .schedule-row input:focus, .duration-input:focus {
+      outline: 2px solid #79aaff;
+      outline-offset: 1px;
+    }
+
+    .action-button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid #3b5275;
+      border-radius: 8px;
+      background: #172640;
+      color: #eaf1ff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .action-button.primary { border-color: #3979e8; background: #3979e8; }
+    .action-button.danger { border-color: #87434d; color: #ffabb1; }
+    .action-button:hover { filter: brightness(1.15); }
+
+    .schedule-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .switch-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      color: #d3dded;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .switch-label input {
+      width: 22px;
+      height: 22px;
+      accent-color: #3979e8;
+    }
+
+    .schedule-status {
+      margin: 14px 0 0;
+      color: #8e9db5;
+    }
+
+    .pomodoro-settings {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .duration-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #aebbd1;
+      font-weight: 700;
+    }
+
+    .duration-input { width: 100px; text-align: center; }
+
+    .pomodoro-panel { text-align: center; }
+
+    .pomodoro-phase {
+      margin: 24px 0 8px;
+      color: #aebbd1;
+      font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .pomodoro-round {
+      color: #8e9db5;
+      font-size: 1.05rem;
+    }
+
+    .pomodoro-clock {
+      margin: 8px 0 18px;
+      color: #fff;
+      font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+      font-size: clamp(5rem, 20vw, 12rem);
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      line-height: 1.1;
+      text-shadow: 0 0 42px rgba(94, 157, 255, .2);
+    }
+
+    .pomodoro-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 620px) {
+      .schedule-head { display: none; }
+      .schedule-row { grid-template-columns: 1fr 1fr; }
+      .schedule-row input:first-child { grid-column: 1 / -1; }
+      .schedule-row .remove-lesson { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 760px) {
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .exam-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 420px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .clock { font-size: clamp(4.2rem, 20vw, 6rem); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <nav class="tabs" role="tablist" aria-label="計時工具">
+      <button class="tab-button" id="tab-exam" type="button" role="tab" aria-selected="true" aria-controls="exam-view">考試大鐘</button>
+      <button class="tab-button" id="tab-bells" type="button" role="tab" aria-selected="false" aria-controls="bells-view">上下課鐘</button>
+      <button class="tab-button" id="tab-pomodoro" type="button" role="tab" aria-selected="false" aria-controls="pomodoro-view">讀書番茄鐘</button>
+    </nav>
+
+    <section class="tab-panel" id="exam-view" role="tabpanel" aria-labelledby="tab-exam">
+    <section class="clock-panel" aria-label="目前時間與考試倒數">
+      <div class="date" id="date" aria-live="off"></div>
+      <div class="clock" id="clock" role="timer" aria-label="現在時間">--:--:--</div>
+      <div class="countdown" id="countdown" aria-live="polite"></div>
+    </section>
+
+    <section class="exam-card" aria-label="考試資訊">
+      <div class="info-item">
+        <span class="info-label">考試科目</span>
+        <span class="info-value" id="show-subject">尚未設定</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">考試時間</span>
+        <span class="info-value" id="show-time">--:-- ～ --:--</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">監考老師</span>
+        <span class="info-value" id="show-teacher">尚未設定</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">出席狀況（應到 / 實到 / 缺考）</span>
+        <span class="info-value" id="show-attendance">0 / 0 / 0</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-labelledby="settings-title">
+      <h1 id="settings-title">考試資訊設定</h1>
+      <div class="form-grid">
+        <label class="field" for="subject">
+          考試科目
+          <input id="subject" type="text" maxlength="60" placeholder="例如：數學">
+        </label>
+        <label class="field" for="start-time">
+          開始時間（24 小時制）
+          <input id="start-time" type="time">
+        </label>
+        <label class="field" for="end-time">
+          結束時間（24 小時制）
+          <input id="end-time" type="time">
+        </label>
+        <label class="field" for="teacher">
+          監考老師
+          <input id="teacher" type="text" maxlength="60" placeholder="例如：王老師">
+        </label>
+        <label class="field" for="expected">
+          應到人數
+          <input id="expected" type="number" min="0" step="1" inputmode="numeric" value="0">
+        </label>
+        <label class="field" for="present">
+          實到人數
+          <input id="present" type="number" min="0" step="1" inputmode="numeric" value="0">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="fullscreen-button" id="fullscreen-button" type="button">進入全螢幕</button>
+      </div>
+      <p class="storage-note">設定會自動儲存在此裝置的瀏覽器中</p>
+    </section>
+    </section>
+
+    <section class="tab-panel" id="bells-view" role="tabpanel" aria-labelledby="tab-bells" hidden>
+      <section class="tool-card" aria-labelledby="bells-title">
+        <h1 class="tool-heading" id="bells-title">上下課鐘</h1>
+        <p class="tool-description">按鈕可立即播放鈴聲；啟用自動打鐘後，會依課表在上課及下課時間播放。</p>
+        <div class="bell-actions">
+          <button class="bell-button" id="play-class-bell" type="button">上課鈴</button>
+          <button class="bell-button" id="play-break-bell" type="button">下課鈴</button>
+        </div>
+      </section>
+
+      <section class="tool-card" aria-labelledby="schedule-title">
+        <h2 id="schedule-title">每日課表</h2>
+        <div class="schedule-head" aria-hidden="true">
+          <span>節次</span><span>上課時間</span><span>下課時間</span><span>操作</span>
+        </div>
+        <div id="schedule-list"></div>
+        <div class="schedule-actions">
+          <button class="action-button" id="add-lesson" type="button">＋ 新增一節</button>
+          <label class="switch-label" for="auto-bell">
+            <input id="auto-bell" type="checkbox">
+            啟用自動打鐘
+          </label>
+        </div>
+        <p class="schedule-status" id="schedule-status" aria-live="polite">自動打鐘目前已停用</p>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="pomodoro-view" role="tabpanel" aria-labelledby="tab-pomodoro" hidden>
+      <section class="tool-card pomodoro-panel" aria-labelledby="pomodoro-title">
+        <h1 class="tool-heading" id="pomodoro-title">讀書番茄鐘</h1>
+        <div class="pomodoro-settings">
+          <label class="duration-field" for="focus-duration">
+            專注
+            <input class="duration-input" id="focus-duration" type="number" min="1" max="180" step="1" value="25">
+            分鐘
+          </label>
+          <label class="duration-field" for="break-duration">
+            休息
+            <input class="duration-input" id="break-duration" type="number" min="1" max="60" step="1" value="5">
+            分鐘
+          </label>
+        </div>
+        <div class="pomodoro-phase" id="pomodoro-phase">專注時間</div>
+        <div class="pomodoro-round" id="pomodoro-round">第 1 輪</div>
+        <div class="pomodoro-clock" id="pomodoro-clock" role="timer" aria-label="番茄鐘倒數">25:00</div>
+        <div class="pomodoro-actions">
+          <button class="action-button primary" id="pomodoro-start" type="button">開始</button>
+          <button class="action-button" id="pomodoro-pause" type="button" disabled>暫停</button>
+          <button class="action-button" id="pomodoro-reset" type="button">重設</button>
+          <button class="action-button" id="pomodoro-skip" type="button">跳過</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var storageKey = "exam-clock-settings";
+      var toolsStorageKey = "school-clock-tools-settings";
+      var app = document.getElementById("app");
+      var clock = document.getElementById("clock");
+      var date = document.getElementById("date");
+      var countdown = document.getElementById("countdown");
+      var fullscreenButton = document.getElementById("fullscreen-button");
+      var scheduleList = document.getElementById("schedule-list");
+      var autoBell = document.getElementById("auto-bell");
+      var schedule = [];
+      var playedAutoBellKeys = [];
+      var lessonSequence = 0;
+      var audioContext = null;
+      var fields = {
+        subject: document.getElementById("subject"),
+        startTime: document.getElementById("start-time"),
+        endTime: document.getElementById("end-time"),
+        teacher: document.getElementById("teacher"),
+        expected: document.getElementById("expected"),
+        present: document.getElementById("present")
+      };
+      var pomodoro = {
+        phase: "focus",
+        round: 1,
+        remainingSeconds: 25 * 60,
+        running: false,
+        endsAt: 0
+      };
+
+      function localDateKey(now) {
+        return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+      }
+
+      function pad(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function setActiveTab(name) {
+        var tabs = [
+          { name: "exam", button: "tab-exam", panel: "exam-view" },
+          { name: "bells", button: "tab-bells", panel: "bells-view" },
+          { name: "pomodoro", button: "tab-pomodoro", panel: "pomodoro-view" }
+        ];
+        tabs.forEach(function (tab) {
+          var selected = tab.name === name;
+          document.getElementById(tab.button).setAttribute("aria-selected", String(selected));
+          document.getElementById(tab.panel).hidden = !selected;
+        });
+      }
+
+      function safeText(value) {
+        return value.trim() || "尚未設定";
+      }
+
+      function wholeNumber(input) {
+        var value = Number(input.value);
+        return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+      }
+
+      function updateExamInfo() {
+        var expected = wholeNumber(fields.expected);
+        var present = wholeNumber(fields.present);
+        document.getElementById("show-subject").textContent = safeText(fields.subject.value);
+        document.getElementById("show-time").textContent =
+          (fields.startTime.value || "--:--") + " ～ " + (fields.endTime.value || "--:--");
+        document.getElementById("show-teacher").textContent = safeText(fields.teacher.value);
+        document.getElementById("show-attendance").textContent =
+          expected + " / " + present + " / " + Math.max(0, expected - present);
+      }
+
+      function saveSettings() {
+        var settings = {};
+        Object.keys(fields).forEach(function (key) {
+          settings[key] = fields[key].value;
+        });
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(settings));
+        } catch (error) {
+          console.error("無法儲存考試資訊至 localStorage。", error);
+        }
+      }
+
+      function loadSettings() {
+        try {
+          var saved = window.localStorage.getItem(storageKey);
+          if (!saved) return;
+          var settings = JSON.parse(saved);
+          Object.keys(fields).forEach(function (key) {
+            if (settings && typeof settings[key] === "string") {
+              fields[key].value = settings[key];
+            }
+          });
+        } catch (error) {
+          console.error("無法讀取已儲存的考試資訊。", error);
+        }
+      }
+
+      function updateClock() {
+        var now = new Date();
+        clock.textContent = new Intl.DateTimeFormat("zh-TW", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false
+        }).format(now);
+        date.textContent = new Intl.DateTimeFormat("zh-TW", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long"
+        }).format(now);
+
+        if (!fields.endTime.value) {
+          countdown.textContent = "請設定考試結束時間";
+          countdown.classList.remove("warning");
+          return;
+        }
+
+        var parts = fields.endTime.value.split(":");
+        var end = new Date(now);
+        end.setHours(Number(parts[0]), Number(parts[1]), 0, 0);
+        var remainingMs = end.getTime() - now.getTime();
+        if (remainingMs <= 0) {
+          countdown.textContent = "考試時間已結束";
+          countdown.classList.remove("warning");
+          return;
+        }
+
+        var minutes = Math.ceil(remainingMs / 60000);
+        countdown.textContent = "距離考試結束還有 " + minutes + " 分鐘";
+        countdown.classList.toggle("warning", minutes <= 10);
+      }
+
+      function updateFullscreenButton() {
+        var isFullscreen = document.fullscreenElement === app;
+        app.classList.toggle("is-fullscreen", isFullscreen);
+        fullscreenButton.textContent = isFullscreen ? "離開全螢幕" : "進入全螢幕";
+      }
+
+      function saveToolsSettings() {
+        var settings = {
+          schedule: schedule,
+          autoBell: autoBell.checked,
+          focusMinutes: document.getElementById("focus-duration").value,
+          breakMinutes: document.getElementById("break-duration").value,
+          playedAutoBellKeys: playedAutoBellKeys
+        };
+        try {
+          window.localStorage.setItem(toolsStorageKey, JSON.stringify(settings));
+        } catch (error) {
+          console.error("無法儲存課表與計時器設定。", error);
+        }
+      }
+
+      function loadToolsSettings() {
+        try {
+          var saved = window.localStorage.getItem(toolsStorageKey);
+          if (!saved) return;
+          var settings = JSON.parse(saved);
+          if (!settings || typeof settings !== "object") return;
+          if (Array.isArray(settings.schedule)) {
+            schedule = settings.schedule.filter(function (lesson) {
+              return lesson && typeof lesson.id === "string" &&
+                typeof lesson.name === "string" &&
+                typeof lesson.start === "string" &&
+                typeof lesson.end === "string";
+            });
+          }
+          autoBell.checked = settings.autoBell === true;
+          if (typeof settings.focusMinutes === "string") {
+            document.getElementById("focus-duration").value = settings.focusMinutes;
+          }
+          if (typeof settings.breakMinutes === "string") {
+            document.getElementById("break-duration").value = settings.breakMinutes;
+          }
+          if (Array.isArray(settings.playedAutoBellKeys)) {
+            playedAutoBellKeys = settings.playedAutoBellKeys.filter(function (key) {
+              return typeof key === "string";
+            });
+          }
+        } catch (error) {
+          console.error("無法讀取已儲存的課表與計時器設定。", error);
+        }
+      }
+
+      function createScheduleInput(type, value, label) {
+        var input = document.createElement("input");
+        input.type = type;
+        input.value = value;
+        input.setAttribute("aria-label", label);
+        input.setAttribute("data-field", type === "text" ? "name" : label === "上課時間" ? "start" : "end");
+        return input;
+      }
+
+      function renderSchedule() {
+        scheduleList.textContent = "";
+        schedule.forEach(function (lesson, index) {
+          var row = document.createElement("div");
+          row.className = "schedule-row";
+          row.setAttribute("data-id", lesson.id);
+
+          var name = createScheduleInput("text", lesson.name, "第 " + (index + 1) + " 節名稱");
+          name.maxLength = 30;
+          name.placeholder = "第 " + (index + 1) + " 節";
+          var start = createScheduleInput("time", lesson.start, "上課時間");
+          var end = createScheduleInput("time", lesson.end, "下課時間");
+          var remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "action-button danger remove-lesson";
+          remove.setAttribute("data-action", "remove");
+          remove.textContent = "刪除";
+
+          row.appendChild(name);
+          row.appendChild(start);
+          row.appendChild(end);
+          row.appendChild(remove);
+          scheduleList.appendChild(row);
+        });
+        updateScheduleStatus();
+      }
+
+      function updateScheduleStatus(message) {
+        var status = document.getElementById("schedule-status");
+        if (message) {
+          status.textContent = message;
+          return;
+        }
+        status.textContent = autoBell.checked
+          ? (schedule.length ? "自動打鐘已啟用，課表將每日生效。" : "自動打鐘已啟用，請先新增課表。")
+          : "自動打鐘目前已停用";
+      }
+
+      function getAudioContext() {
+        var AudioContextType = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextType) {
+          throw new Error("此瀏覽器不支援 Web Audio API。");
+        }
+        if (!audioContext) {
+          audioContext = new AudioContextType();
+        }
+        return audioContext;
+      }
+
+      function playBell(kind) {
+        var context = getAudioContext();
+        var startTimes = kind === "class" ? [0, 0.55, 1.1] : [0, 0.34, 0.68, 1.02];
+        var baseFrequency = kind === "class" ? 880 : 660;
+        var partials = [1, 1.48, 2.02];
+        var now = context.currentTime;
+
+        function ring(frequency, at, volume, duration) {
+          var oscillator = context.createOscillator();
+          var gain = context.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(frequency, at);
+          gain.gain.setValueAtTime(0.0001, at);
+          gain.gain.exponentialRampToValueAtTime(volume, at + 0.018);
+          gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(at);
+          oscillator.stop(at + duration + 0.03);
+        }
+
+        startTimes.forEach(function (offset, strike) {
+          partials.forEach(function (partial, index) {
+            var pitch = baseFrequency * partial * (strike % 2 ? 0.99 : 1);
+            ring(pitch, now + offset, index === 0 ? 0.22 : 0.075, kind === "class" ? 1.55 : 1.25);
+          });
+        });
+      }
+
+      function playBellSafely(kind) {
+        try {
+          var context = getAudioContext();
+          var resume = context.state === "suspended" ? context.resume() : Promise.resolve();
+          resume.then(function () {
+            playBell(kind);
+          }).catch(function (error) {
+            console.error("鈴聲播放失敗。", error);
+            updateScheduleStatus("鈴聲播放失敗，請確認瀏覽器音量與音訊權限。");
+          });
+        } catch (error) {
+          console.error("鈴聲播放失敗。", error);
+          updateScheduleStatus("鈴聲無法播放：" + error.message);
+        }
+      }
+
+      function checkAutomaticBells(now) {
+        if (!autoBell.checked) return;
+        var currentTime = pad(now.getHours()) + ":" + pad(now.getMinutes());
+        var today = localDateKey(now);
+        schedule.forEach(function (lesson) {
+          [
+            { time: lesson.start, kind: "class" },
+            { time: lesson.end, kind: "break" }
+          ].forEach(function (bell) {
+            if (!bell.time || bell.time !== currentTime) return;
+            var key = today + "|" + lesson.id + "|" + bell.kind + "|" + bell.time;
+            if (playedAutoBellKeys.indexOf(key) !== -1) return;
+            playedAutoBellKeys.push(key);
+            playedAutoBellKeys = playedAutoBellKeys.filter(function (playedKey) {
+              return playedKey.indexOf(today + "|") === 0;
+            });
+            saveToolsSettings();
+            playBellSafely(bell.kind);
+            updateScheduleStatus((bell.kind === "class" ? "上課" : "下課") + "時間，正在播放鈴聲。");
+          });
+        });
+      }
+
+      function durationForPhase(phase) {
+        return Number(document.getElementById(phase === "focus" ? "focus-duration" : "break-duration").value) * 60;
+      }
+
+      function updatePomodoro() {
+        if (pomodoro.running) {
+          pomodoro.remainingSeconds = Math.max(0, Math.ceil((pomodoro.endsAt - Date.now()) / 1000));
+          if (pomodoro.remainingSeconds === 0) {
+            switchPomodoroPhase();
+            return;
+          }
+        }
+        var minutes = Math.floor(pomodoro.remainingSeconds / 60);
+        var seconds = pomodoro.remainingSeconds % 60;
+        document.getElementById("pomodoro-clock").textContent = pad(minutes) + ":" + pad(seconds);
+        document.getElementById("pomodoro-phase").textContent =
+          pomodoro.phase === "focus" ? "專注時間" : "休息時間";
+        document.getElementById("pomodoro-round").textContent = "第 " + pomodoro.round + " 輪";
+        document.getElementById("pomodoro-start").disabled = pomodoro.running;
+        document.getElementById("pomodoro-pause").disabled = !pomodoro.running;
+      }
+
+      function switchPomodoroPhase() {
+        playBellSafely("break");
+        if (pomodoro.phase === "focus") {
+          pomodoro.phase = "break";
+        } else {
+          pomodoro.phase = "focus";
+          pomodoro.round += 1;
+        }
+        pomodoro.remainingSeconds = durationForPhase(pomodoro.phase);
+        pomodoro.running = true;
+        pomodoro.endsAt = Date.now() + pomodoro.remainingSeconds * 1000;
+        updatePomodoro();
+      }
+
+      function validateDuration(input, fallback) {
+        var value = Number(input.value);
+        if (!Number.isInteger(value) || value < 1 || value > Number(input.max)) {
+          input.value = String(fallback);
+          return fallback;
+        }
+        return value;
+      }
+
+      document.querySelectorAll(".tab-button").forEach(function (button) {
+        button.addEventListener("click", function () {
+          setActiveTab(button.id === "tab-exam" ? "exam" :
+            button.id === "tab-bells" ? "bells" : "pomodoro");
+        });
+      });
+
+      Object.keys(fields).forEach(function (key) {
+        fields[key].addEventListener("input", function () {
+          updateExamInfo();
+          saveSettings();
+          updateClock();
+        });
+        fields[key].addEventListener("change", function () {
+          updateExamInfo();
+          saveSettings();
+          updateClock();
+        });
+      });
+
+      fullscreenButton.addEventListener("click", function () {
+        if (document.fullscreenElement === app) {
+          document.exitFullscreen().catch(function (error) {
+            console.error("無法離開全螢幕。", error);
+          });
+        } else if (!document.fullscreenElement) {
+          app.requestFullscreen().catch(function (error) {
+            console.error("無法進入全螢幕。", error);
+          });
+        }
+      });
+      document.addEventListener("fullscreenchange", updateFullscreenButton);
+
+      document.getElementById("play-class-bell").addEventListener("click", function () {
+        playBellSafely("class");
+      });
+      document.getElementById("play-break-bell").addEventListener("click", function () {
+        playBellSafely("break");
+      });
+      document.getElementById("add-lesson").addEventListener("click", function () {
+        lessonSequence += 1;
+        schedule.push({
+          id: "lesson-" + Date.now() + "-" + lessonSequence,
+          name: "",
+          start: "",
+          end: ""
+        });
+        renderSchedule();
+        saveToolsSettings();
+      });
+      scheduleList.addEventListener("input", function (event) {
+        var row = event.target.closest(".schedule-row");
+        if (!row) return;
+        var lesson = schedule.find(function (item) {
+          return item.id === row.getAttribute("data-id");
+        });
+        if (!lesson) return;
+        lesson[event.target.getAttribute("data-field")] = event.target.value;
+        saveToolsSettings();
+      });
+      scheduleList.addEventListener("click", function (event) {
+        if (event.target.getAttribute("data-action") !== "remove") return;
+        var row = event.target.closest(".schedule-row");
+        if (!row) return;
+        schedule = schedule.filter(function (lesson) {
+          return lesson.id !== row.getAttribute("data-id");
+        });
+        renderSchedule();
+        saveToolsSettings();
+      });
+      autoBell.addEventListener("change", function () {
+        if (autoBell.checked) {
+          try {
+            getAudioContext().resume().catch(function (error) {
+              console.error("無法啟用自動打鐘所需的音訊。", error);
+              updateScheduleStatus("瀏覽器未允許音訊播放，請先按一次鈴聲按鈕。");
+            });
+          } catch (error) {
+            console.error("無法啟用自動打鐘所需的音訊。", error);
+            updateScheduleStatus("自動打鐘音訊無法啟用：" + error.message);
+          }
+        }
+        saveToolsSettings();
+        updateScheduleStatus();
+      });
+
+      document.getElementById("pomodoro-start").addEventListener("click", function () {
+        pomodoro.running = true;
+        pomodoro.endsAt = Date.now() + pomodoro.remainingSeconds * 1000;
+        updatePomodoro();
+      });
+      document.getElementById("pomodoro-pause").addEventListener("click", function () {
+        pomodoro.remainingSeconds = Math.max(0, Math.ceil((pomodoro.endsAt - Date.now()) / 1000));
+        pomodoro.running = false;
+        updatePomodoro();
+      });
+      document.getElementById("pomodoro-reset").addEventListener("click", function () {
+        pomodoro.phase = "focus";
+        pomodoro.round = 1;
+        pomodoro.running = false;
+        pomodoro.remainingSeconds = durationForPhase("focus");
+        updatePomodoro();
+      });
+      document.getElementById("pomodoro-skip").addEventListener("click", function () {
+        pomodoro.running = false;
+        switchPomodoroPhase();
+      });
+
+      ["focus-duration", "break-duration"].forEach(function (id) {
+        var input = document.getElementById(id);
+        input.addEventListener("change", function () {
+          var fallback = id === "focus-duration" ? 25 : 5;
+          validateDuration(input, fallback);
+          saveToolsSettings();
+          if (!pomodoro.running && pomodoro.phase === (id === "focus-duration" ? "focus" : "break")) {
+            pomodoro.remainingSeconds = durationForPhase(pomodoro.phase);
+          }
+          updatePomodoro();
+        });
+      });
+
+      loadSettings();
+      loadToolsSettings();
+      renderSchedule();
+      updateExamInfo();
+      updateClock();
+      validateDuration(document.getElementById("focus-duration"), 25);
+      validateDuration(document.getElementById("break-duration"), 5);
+      pomodoro.remainingSeconds = durationForPhase("focus");
+      updatePomodoro();
+      saveToolsSettings();
+      window.setInterval(function () {
+        updateClock();
+        checkAutomaticBells(new Date());
+        updatePomodoro();
+      }, 1000);
+    }());
+  </script>
+</body>
+</html>
